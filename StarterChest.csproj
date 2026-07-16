@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<AssemblyName>StarterChest</AssemblyName>
+		<RootNamespace>StarterChest</RootNamespace>
+		<Nullable>disable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<!-- Override by setting the VINTAGE_STORY environment variable if the game is installed elsewhere -->
+		<VintagestoryPath Condition="'$(VINTAGE_STORY)' != ''">$(VINTAGE_STORY)</VintagestoryPath>
+		<VintagestoryPath Condition="'$(VintagestoryPath)' == ''">C:\Users\Mitch\AppData\Roaming\Vintagestory</VintagestoryPath>
+		<!-- Override by setting the VINTAGE_STORY_DATA environment variable if the data folder is installed elsewhere -->
+		<VintagestoryDataPath Condition="'$(VINTAGE_STORY_DATA)' != ''">$(VINTAGE_STORY_DATA)</VintagestoryDataPath>
+		<VintagestoryDataPath Condition="'$(VintagestoryDataPath)' == ''">C:\Users\Mitch\AppData\Roaming\VintagestoryData</VintagestoryDataPath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Reference Include="VintagestoryAPI">
+			<HintPath>$(VintagestoryPath)\VintagestoryAPI.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="VintagestoryLib">
+			<HintPath>$(VintagestoryPath)\VintagestoryLib.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="VSSurvivalMod">
+			<HintPath>$(VintagestoryPath)\Mods\VSSurvivalMod.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Newtonsoft.Json">
+			<HintPath>$(VintagestoryPath)\Lib\Newtonsoft.Json.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+
+	<!-- Copies the built mod straight into the game's Mods folder for quick local testing -->
+	<Target Name="DeployMod" AfterTargets="Build">
+		<ItemGroup>
+			<ModAssets Include="modinfo.json" />
+			<ModAssets Include="assets\**\*.*" Condition="Exists('assets')" />
+		</ItemGroup>
+		<MakeDir Directories="$(VintagestoryDataPath)\Mods\StarterChest" />
+		<Copy SourceFiles="$(TargetDir)StarterChest.dll" DestinationFolder="$(VintagestoryDataPath)\Mods\StarterChest" />
+		<Copy SourceFiles="@(ModAssets)" DestinationFolder="$(VintagestoryDataPath)\Mods\StarterChest\%(RecursiveDir)" />
+	</Target>
+
+</Project>

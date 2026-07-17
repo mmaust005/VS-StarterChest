@@ -37,6 +37,7 @@
 	<Target Name="DeployMod" AfterTargets="Build">
 		<ItemGroup>
 			<ModRootFiles Include="modinfo.json" />
+			<ModRootFiles Include="modicon.png" Condition="Exists('modicon.png')" />
 			<ModAssetFiles Include="assets\**\*.*" Condition="Exists('assets')" />
 		</ItemGroup>
 		<MakeDir Directories="$(VintagestoryDataPath)\Mods\StarterChest" />

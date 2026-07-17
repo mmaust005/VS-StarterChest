@@ -146,3 +146,8 @@ your side-by-side SDK folder to PATH (before the existing `dotnet`) for this she
 
 By default, `StarterChest.csproj` looks for the game/data folders under `%APPDATA%`. Set the
 `VINTAGE_STORY` / `VINTAGE_STORY_DATA` environment variables to override either path.
+
+## License
+
+Source code is [MIT licensed](LICENSE). The mod icon and other artwork are All Rights Reserved -
+see [`assets/NOTICE.md`](assets/NOTICE.md).

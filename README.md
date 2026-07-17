@@ -4,7 +4,9 @@ Gives every new player on a Vintage Story 1.22.3 server a one-time chest of star
 placed on the ground near them the first time they spawn - like a Minecraft "starter kit"
 datapack, but configurable and mod-aware.
 
-- The chest is a normal vanilla chest, placed once per player and never refilled or respawned.
+- The container defaults to a normal vanilla chest but is configurable (chest, trunk, or any
+  other placeable container block, including modded ones), placed once per player and never
+  refilled or respawned.
 - Each player is tracked individually (server-side player data), so leaving and rejoining, or
   dying and respawning, will not grant a second chest.
 - Item/block codes can reference any installed mod, not just vanilla content.
@@ -21,6 +23,7 @@ matching the schema below, and the mod will use it as-is instead of the packaged
 
 ```json
 {
+  "ContainerCode": "game:chest-north",
   "RandomMode": true,
   "RandomPickCount": 4,
   "AllowDuplicatePicks": false,
@@ -31,6 +34,10 @@ matching the schema below, and the mod will use it as-is instead of the packaged
 }
 ```
 
+- **ContainerCode** - which block to place as the starter container, e.g. `"game:chest-north"`
+  (16 slots, default) or `"game:trunk-north"` (36 slots). Any valid placeable container block
+  code works, including ones from other mods. Falls back to the default chest, with a logged
+  error, if the code is invalid or not a container.
 - **RandomMode** - when `true` (default, Minecraft-style), `RandomPickCount` entries are drawn
   from `RandomPool` and added on top of `FixedItems`. When `false`, only `FixedItems` are given.
 - **RandomPickCount** - how many random entries to draw per player.
@@ -51,9 +58,10 @@ Each entry (`FixedItems` and `RandomPool`) supports:
 | `Weight` | Relative chance of being picked (`RandomPool` only). |
 
 If a configured code belongs to a mod that isn't installed, that entry is skipped and a warning
-is logged - it won't crash the chest or break other entries. The chest has a limited number of
-slots (16 for a normal chest); if `FixedItems` + your random picks add up to more than that, the
-extras are dropped and a warning is logged, so keep pick counts reasonable.
+is logged - it won't crash the chest or break other entries. The container has a limited number
+of slots (16 for the default chest, 36 for a trunk, varies for modded containers); if
+`FixedItems` + your random picks add up to more than that, the extras are dropped and a warning
+is logged, so keep pick counts reasonable.
 
 ## Building
 

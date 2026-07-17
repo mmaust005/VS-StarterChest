@@ -23,12 +23,19 @@ namespace StarterChest
 	public class StarterChestConfig
 	{
 		/// <summary>
-		/// Which block to place as the starter container, e.g. "game:chest-north" (16 slots) or
-		/// "game:trunk-north" (36 slots). Any valid placeable container block code works, including
-		/// ones from other mods. Falls back to the default chest if the code is invalid or not a
-		/// container.
+		/// Which block to place as the starter container, without an orientation suffix, e.g.
+		/// "game:chest" (16 slots) or "game:trunk" (36 slots). Any valid placeable container block
+		/// code works, including ones from other mods. Falls back to the default chest if the code
+		/// is invalid or not a container. See ContainerOrientation for which way it faces.
 		/// </summary>
-		public string ContainerCode = "game:chest-north";
+		public string ContainerCode = "game:chest";
+
+		/// <summary>
+		/// Which direction the container faces: "north", "east", "south", or "west". Leave empty
+		/// (the default) to pick a random direction for each player - purely cosmetic, doesn't
+		/// affect slot count or any other behavior.
+		/// </summary>
+		public string ContainerOrientation = "";
 
 		/// <summary>
 		/// When true (the default), RandomPickCount entries are randomly drawn from RandomPool

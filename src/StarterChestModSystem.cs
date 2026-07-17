@@ -212,18 +212,53 @@ namespace StarterChest
 			return new ItemStack(collectible, qty);
 		}
 
-		const string DefaultContainerCode = "game:chest-north";
+		const string DefaultContainerCode = "game:chest";
+		static readonly string[] Orientations = { "north", "east", "south", "west" };
 
 		Block ResolveContainerBlock()
 		{
-			Block block = sapi.World.BlockAccessor.GetBlock(new AssetLocation(config.ContainerCode));
-			if (block != null && block.Id != 0 && !string.IsNullOrEmpty(block.EntityClass))
+			// Picked once per chest so a fixed ContainerOrientation applies consistently to both
+			// the configured code and the fallback, instead of re-rolling for each.
+			string orientation = PickOrientation();
+
+			Block block = ResolveContainerBlockForBaseCode(config.ContainerCode, orientation);
+			if (block != null)
 			{
 				return block;
 			}
 
 			sapi.Logger.Error("[StarterChest] Configured ContainerCode '{0}' is not a valid container block - falling back to the default chest ('{1}').", config.ContainerCode, DefaultContainerCode);
-			return sapi.World.BlockAccessor.GetBlock(new AssetLocation(DefaultContainerCode));
+			return ResolveContainerBlockForBaseCode(DefaultContainerCode, orientation);
+		}
+
+		Block ResolveContainerBlockForBaseCode(string baseCode, string orientation)
+		{
+			Block block = sapi.World.BlockAccessor.GetBlock(new AssetLocation($"{baseCode}-{orientation}"));
+			if (IsContainerBlock(block)) return block;
+
+			// Not every container is direction-variant (some modded ones, or an already-complete
+			// code like "somemodid:special-chest-north") - fall back to the bare code as-is.
+			block = sapi.World.BlockAccessor.GetBlock(new AssetLocation(baseCode));
+			if (IsContainerBlock(block)) return block;
+
+			return null;
+		}
+
+		static bool IsContainerBlock(Block block) => block != null && block.Id != 0 && !string.IsNullOrEmpty(block.EntityClass);
+
+		string PickOrientation()
+		{
+			if (!string.IsNullOrWhiteSpace(config.ContainerOrientation))
+			{
+				string requested = config.ContainerOrientation.Trim().ToLowerInvariant();
+				if (Array.IndexOf(Orientations, requested) >= 0)
+				{
+					return requested;
+				}
+				sapi.Logger.Warning("[StarterChest] Configured ContainerOrientation '{0}' is not a valid direction (north/east/south/west) - picking a random direction instead.", config.ContainerOrientation);
+			}
+
+			return Orientations[sapi.World.Rand.Next(Orientations.Length)];
 		}
 
 		void GiveStarterChest(IServerPlayer player, List<ItemStack> stacks)

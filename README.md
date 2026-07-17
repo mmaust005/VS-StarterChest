@@ -1,11 +1,13 @@
 # Starter Chest
 
+![Starter Chest banner](docs/banner.png)
+
 Gives every new player on a Vintage Story 1.22.3 server a one-time chest of starting supplies,
 placed on the ground near them the first time they spawn - a configurable, mod-aware starter kit.
 
 - The container defaults to a normal vanilla chest but is configurable (chest, trunk, or any
   other placeable container block, including modded ones), placed once per player and never
-  refilled or respawned.
+  refilled or respawned. It faces a random direction by default, or a fixed one if configured.
 - Each player is tracked individually (server-side player data), so leaving and rejoining, or
   dying and respawning, will not grant a second chest.
 - Item/block codes can reference any installed mod, not just vanilla content.
@@ -37,7 +39,8 @@ the server/world - it will be recreated from the packaged file.
 
 ```json
 {
-  "ContainerCode": "game:chest-north",
+  "ContainerCode": "game:chest",
+  "ContainerOrientation": "",
   "RandomMode": true,
   "RandomPickCount": 4,
   "AllowDuplicatePicks": false,
@@ -48,10 +51,14 @@ the server/world - it will be recreated from the packaged file.
 }
 ```
 
-- **ContainerCode** - which block to place as the starter container, e.g. `"game:chest-north"`
-  (16 slots, default) or `"game:trunk-north"` (36 slots). Any valid placeable container block
-  code works, including ones from other mods. Falls back to the default chest, with a logged
-  error, if the code is invalid or not a container.
+- **ContainerCode** - which block to place as the starter container, *without* an orientation
+  suffix, e.g. `"game:chest"` (16 slots, default) or `"game:trunk"` (36 slots). Any valid
+  placeable container block code works, including ones from other mods. Falls back to the
+  default chest, with a logged error, if the code is invalid or not a container.
+- **ContainerOrientation** - which way the container faces: `"north"`, `"east"`, `"south"`, or
+  `"west"`. Leave it as `""` (default) to pick a random direction for each player - it's purely
+  cosmetic and has no effect on slot count or any other behavior. An invalid value falls back to
+  random, with a logged warning.
 - **RandomMode** - when `true` (default), `RandomPickCount` entries are drawn
   from `RandomPool` and added on top of `FixedItems`. When `false`, only `FixedItems` are given.
 - **RandomPickCount** - how many random entries to draw per player.

@@ -1,8 +1,7 @@
 # Starter Chest
 
 Gives every new player on a Vintage Story 1.22.3 server a one-time chest of starting supplies,
-placed on the ground near them the first time they spawn - like a Minecraft "starter kit"
-datapack, but configurable and mod-aware.
+placed on the ground near them the first time they spawn - a configurable, mod-aware starter kit.
 
 - The container defaults to a normal vanilla chest but is configurable (chest, trunk, or any
   other placeable container block, including modded ones), placed once per player and never
@@ -50,7 +49,7 @@ matching the schema below, and the mod will use it as-is instead of the packaged
   (16 slots, default) or `"game:trunk-north"` (36 slots). Any valid placeable container block
   code works, including ones from other mods. Falls back to the default chest, with a logged
   error, if the code is invalid or not a container.
-- **RandomMode** - when `true` (default, Minecraft-style), `RandomPickCount` entries are drawn
+- **RandomMode** - when `true` (default), `RandomPickCount` entries are drawn
   from `RandomPool` and added on top of `FixedItems`. When `false`, only `FixedItems` are given.
 - **RandomPickCount** - how many random entries to draw per player.
 - **AllowDuplicatePicks** - if `true`, the same pool entry can be picked more than once for the

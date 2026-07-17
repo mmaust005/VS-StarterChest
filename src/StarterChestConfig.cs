@@ -31,8 +31,8 @@ namespace StarterChest
 		public string ContainerCode = "game:chest-north";
 
 		/// <summary>
-		/// When true (the default, like Minecraft's random starter kit datapacks), RandomPickCount
-		/// entries are randomly drawn from RandomPool and added on top of FixedItems.
+		/// When true (the default), RandomPickCount entries are randomly drawn from RandomPool
+		/// and added on top of FixedItems.
 		/// When false, only FixedItems are given.
 		/// </summary>
 		public bool RandomMode = true;

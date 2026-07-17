@@ -300,7 +300,7 @@ namespace StarterChest
 				if (IsSuitable(candidate)) return candidate;
 			}
 
-			// Nothing ideal nearby - just place it in front of the player, like Minecraft's /setblock does.
+			// Nothing ideal nearby - just place it in front of the player, like a direct block placement would.
 			return candidates[0];
 		}
 

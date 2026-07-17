@@ -20,7 +20,7 @@
 	// error is logged and the mod falls back to the default chest so players still get their loot.
 	"ContainerCode": "game:chest-north",
 
-	// true  (default, like Minecraft's random starter kit datapacks) - RandomPickCount entries
+	// true  (default) - RandomPickCount entries
 	//       are randomly drawn from RandomPool below and added on top of FixedItems.
 	// false - only FixedItems are given; RandomPool is ignored entirely.
 	"RandomMode": true,
@@ -35,7 +35,7 @@
 
 	// Items ALWAYS given to every player, regardless of RandomMode. Use this for a guaranteed
 	// baseline kit (e.g. always give a torch), and leave RandomPool below for randomized bonus
-	// loot. Empty by default - purely random, like Minecraft.
+	// loot. Empty by default - purely random.
 	//
 	// Each entry needs:
 	//   Code        - item/block code, e.g. "game:bread-rye-perfect". No domain prefix defaults

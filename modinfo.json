@@ -5,7 +5,7 @@
 	"version": "1.0.0",
 	"networkVersion": "1.0.0",
 	"description": "Gives every new player a one-time starter chest filled with configurable loot. Supports fixed guaranteed items, a weighted random pool (Minecraft-style, enabled by default), and items/blocks from other mods.",
-	"authors": [ "Mitch" ],
+	"authors": [ "Duffas" ],
 	"side": "Server",
 	"dependencies": {
 		"game": "1.22.3"

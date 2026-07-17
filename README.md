@@ -11,6 +11,18 @@ datapack, but configurable and mod-aware.
   dying and respawning, will not grant a second chest.
 - Item/block codes can reference any installed mod, not just vanilla content.
 
+## Testing / resetting a player
+
+Since each player only ever gets one chest, re-testing config changes normally means creating a
+new character. Instead, server operators (`controlserver` privilege) can run:
+
+```
+/starterchest reset <playername>
+```
+
+This clears that (online) player's starter-chest flag and immediately gives them a fresh chest
+with the current config - no restart or new character needed.
+
 ## Config
 
 On first run the mod writes `ModConfig/StarterChestConfig.json` in your server/game data folder,

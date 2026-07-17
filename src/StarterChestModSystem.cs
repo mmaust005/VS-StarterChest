@@ -27,6 +27,31 @@ namespace StarterChest
 			LoadConfig();
 
 			sapi.Event.PlayerNowPlaying += OnPlayerNowPlaying;
+
+			sapi.ChatCommands.Create("starterchest")
+				.WithDescription("Manage the Starter Chest mod")
+				.RequiresPrivilege(Privilege.controlserver)
+				.BeginSubCommand("reset")
+					.WithDescription("Clears the given (online) player's starter-chest flag and immediately gives them a fresh one - handy for testing config changes without restarting the server.")
+					.WithArgs(sapi.ChatCommands.Parsers.OnlinePlayer("player"))
+					.HandleWith(OnResetCommand)
+				.EndSubCommand();
+		}
+
+		TextCommandResult OnResetCommand(TextCommandCallingArgs args)
+		{
+			var target = (IServerPlayer)args[0];
+
+			target.SetModData(ReceivedModDataKey, true);
+
+			List<ItemStack> stacks = BuildLootStacks();
+			if (stacks.Count == 0)
+			{
+				return TextCommandResult.Success($"Cleared {target.PlayerName}'s starter-chest flag, but no loot is configured (check FixedItems/RandomPool) so no chest was given.");
+			}
+
+			GiveStarterChest(target, stacks);
+			return TextCommandResult.Success($"Reset and gave {target.PlayerName} a fresh starter chest.");
 		}
 
 		void LoadConfig()

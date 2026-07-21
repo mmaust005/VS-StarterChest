@@ -201,6 +201,10 @@ icon, assets, this README), no source or dev files:
 
 This writes `release/StarterChest.zip` (gitignored, rebuilt fresh each time).
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
 Source code is [MIT licensed](LICENSE). The mod icon and other artwork are All Rights Reserved -

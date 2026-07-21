@@ -8,9 +8,15 @@ placed on the ground near them the first time they spawn - a configurable, mod-a
 - The container defaults to a normal vanilla chest but is configurable (chest, trunk, or any
   other placeable container block, including modded ones), placed once per player and never
   refilled or respawned. It faces a random direction by default, or a fixed one if configured.
+- Loot combines guaranteed `FixedItems` with a weighted `RandomPool`, auto-fit to however many
+  slots the chosen container actually has - no manual tuning needed for modded containers.
+- Loadouts can be customized per character class (`ClassLoadouts`), so a Hunter and a Clockmaker
+  can get different, class-appropriate starting gear instead of the same shared pool.
 - Each player is tracked individually (server-side player data), so leaving and rejoining, or
   dying and respawning, will not grant a second chest.
 - Item/block codes can reference any installed mod, not just vanilla content.
+- Server operators get `/starterchest reset` and `/starterchest preview` commands for testing
+  config changes without restarting the server or spawning extra chests.
 
 ## Testing / resetting a player
 

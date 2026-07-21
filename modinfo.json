@@ -6,6 +6,7 @@
 	"networkVersion": "1.0.0",
 	"description": "Gives every new player a one-time starter chest filled with configurable loot. Supports fixed guaranteed items, a weighted random pool (enabled by default), and items/blocks from other mods.",
 	"authors": [ "Duffas" ],
+	"website": "https://github.com/mmaust005/VS-StarterChest",
 	"side": "Server",
 	"dependencies": {
 		"game": "1.22.3"

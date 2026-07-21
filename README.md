@@ -206,8 +206,8 @@ Call it from your addon's `StartServerSide`, once the base mod is loaded:
 sapi.ModLoader.GetModSystem<StarterChestModSystem>()?.RegisterLoadoutProvider(MyProvider, MyReadyCheck);
 ```
 
-The official class-based-loadout addon (**Starter Chest: Class Loadouts** - separate mod, separate
-repo) is built entirely on this API and is a good reference implementation.
+The official class-based-loadout addon, [Starter Chest: Class Loadouts](https://github.com/mmaust005/VS-StarterChestClasses),
+is built entirely on this API and is a good reference implementation.
 
 ## Changelog
 

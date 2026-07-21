@@ -1,3 +1,4 @@
 {
-	"starterchest:chest-appeared": "A starter chest has appeared nearby!"
+	"starterchest:chest-appeared": "A starter {0} has appeared nearby!",
+	"starterchest:chest-appeared-class": "A starter {0} {1} has appeared nearby!"
 }

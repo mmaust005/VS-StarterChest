@@ -10,9 +10,6 @@ placed on the ground near them the first time they spawn - a configurable, mod-a
   refilled or respawned. It faces a random direction by default, or a fixed one if configured.
 - Loot combines guaranteed `FixedItems` with a weighted `RandomPool`, auto-fit to however many
   slots the chosen container actually has - no manual tuning needed for modded containers.
-- Loadouts can be customized per character class - one file per class under
-  `ModConfig/StarterChestClasses/`, shipped with defaults for all 6 vanilla classes - so a Hunter
-  and a Clockmaker get different, class-appropriate starting gear instead of the same shared pool.
 - Each player is tracked individually (server-side player data), so leaving and rejoining, or
   dying and respawning, will not grant a second chest.
 - Item/block codes can reference any installed mod, not just vanilla content.
@@ -29,8 +26,7 @@ new character. Instead, server operators (`controlserver` privilege) can run:
 ```
 
 This clears that (online) player's starter-chest flag and immediately gives them a fresh chest
-with the current config - no restart or new character needed. If a loadout file exists for that
-player's character class, this uses it, same as a real first-join would.
+with the current config - no restart or new character needed.
 
 To check what a config change *would* give without spawning a chest at all:
 
@@ -115,38 +111,6 @@ this in normal use. The only case still worth a warning is `FixedItems` alone ex
 container's slots, since those are meant to be guaranteed and can't be auto-capped without
 breaking that guarantee.
 
-### Class loadouts
-
-A player's chosen character class can get its own loadout instead of the top-level
-`FixedItems`/`RandomPool` above. Rather than one big list buried in the main config, each class
-is its own file under `ModConfig/StarterChestClasses/`, named `<classcode>.json` (e.g.
-`hunter.json`). On first run, this folder is created and seeded with a default loadout for all
-6 vanilla classes (`commoner`, `hunter`, `malefactor`, `clockmaker`, `blackguard`, `tailor`) -
-edit any of them freely, they're never touched again afterwards, same as the main config.
-
-A class without a file here - including any class added by another mod - just falls back to the
-top-level `FixedItems`/`RandomPool` as normal.
-
-Each file has the same shape as the top-level config:
-
-```json
-{
-  "RandomMode": true,
-  "RandomPickCount": 2,
-  "AllowDuplicatePicks": false,
-  "FixedItems": [
-    { "Code": "game:knife-generic-flint", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1 }
-  ],
-  "RandomPool": [
-    { "Code": "game:rope", "Type": "item", "MinQuantity": 2, "MaxQuantity": 4, "Weight": 20 }
-  ]
-}
-```
-
-This is also how modded classes get support: a mod author (or anyone in the community) can ship
-or share a single `<theirclasscode>.json` file, and a server admin just drops it into
-`ModConfig/StarterChestClasses/` and restarts - no editing the main config at all.
-
 ### How weighting works
 
 `Weight` has no fixed scale (not 1-100, not percentages) - it's only ever compared to the other
@@ -217,6 +181,35 @@ icon, assets, this README), no source or dev files:
 ```
 
 This writes `release/StarterChest.zip` (gitignored, rebuilt fresh each time).
+
+## Addons
+
+Other mods can override what a specific player gets - for example, varying the loadout by
+character class - without forking or reimplementing any of this mod's placement/container logic.
+`StarterChestModSystem` exposes:
+
+```csharp
+public void RegisterLoadoutProvider(StarterChestLoadoutProvider provider, StarterChestReadyCheck readyCheck = null)
+```
+
+- `provider` is called once this mod is ready to resolve a loadout for a player, and returns a
+  `StarterChestLoadoutResult` (a `StarterChestLoadout` - same shape as the top-level config - plus
+  an optional, already-localized `DisplayName` shown in the "A starter {DisplayName} chest has
+  appeared nearby!" message and in `/starterchest preview` output). Return `null` to fall back to
+  the top-level config for that player.
+- `readyCheck` is optional. If given, it's polled briefly (bounded by a timeout) before giving a
+  new player's automatic chest, so the provider can wait for whatever it needs - e.g. character
+  creation to finish - before being asked to resolve anything. Only one provider can be registered
+  at a time.
+
+Call it from your addon's `StartServerSide`, once the base mod is loaded:
+
+```csharp
+sapi.ModLoader.GetModSystem<StarterChestModSystem>()?.RegisterLoadoutProvider(MyProvider, MyReadyCheck);
+```
+
+The official class-based-loadout addon (**Starter Chest: Class Loadouts** - separate mod, separate
+repo) is built entirely on this API and is a good reference implementation.
 
 ## Changelog
 

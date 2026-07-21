@@ -20,20 +20,6 @@ namespace StarterChest
 		public int Weight = 100;
 	}
 
-	/// <summary>
-	/// A per-class override of FixedItems/RandomPool/RandomPickCount/AllowDuplicatePicks - same
-	/// shape and meaning as the top-level StarterChestConfig fields of the same name, just scoped
-	/// to players of one character class instead of everyone.
-	/// </summary>
-	public class ClassLoadout
-	{
-		public bool RandomMode = true;
-		public int RandomPickCount = 4;
-		public bool AllowDuplicatePicks = false;
-		public List<LootEntry> FixedItems = new List<LootEntry>();
-		public List<LootEntry> RandomPool = new List<LootEntry>();
-	}
-
 	public class StarterChestConfig
 	{
 		/// <summary>

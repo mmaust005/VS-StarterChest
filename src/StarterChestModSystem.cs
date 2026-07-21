@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
@@ -15,14 +14,14 @@ namespace StarterChest
 	{
 		const string ConfigFilename = "StarterChestConfig.json";
 		const string ReceivedModDataKey = "starterchest:received";
-		const string ClassLoadoutsDirName = "StarterChestClasses";
 		static readonly AssetLocation PackagedDefaultConfigLocation = new AssetLocation("starterchest", "config/defaultconfig.json");
-		const string PackagedClassLoadoutsPath = "config/classes/";
 
 		ICoreServerAPI sapi;
 		StarterChestConfig config;
-		readonly Dictionary<string, ClassLoadout> classLoadouts = new Dictionary<string, ClassLoadout>();
 		readonly HashSet<string> warnedMissingCodes = new HashSet<string>();
+
+		StarterChestLoadoutProvider loadoutProvider;
+		StarterChestReadyCheck readyCheck;
 
 		public override bool ShouldLoad(EnumAppSide forSide) => forSide == EnumAppSide.Server;
 
@@ -30,7 +29,6 @@ namespace StarterChest
 		{
 			sapi = api;
 			LoadConfig();
-			LoadClassLoadouts();
 
 			sapi.Event.PlayerNowPlaying += OnPlayerNowPlaying;
 
@@ -47,6 +45,27 @@ namespace StarterChest
 					.WithArgs(sapi.ChatCommands.Parsers.OnlinePlayer("player"))
 					.HandleWith(OnPreviewCommand)
 				.EndSubCommand();
+		}
+
+		/// <summary>
+		/// Lets another mod (e.g. an addon) supply a per-player loadout override instead of the
+		/// top-level FixedItems/RandomPool/RandomPickCount/AllowDuplicatePicks - for example to vary
+		/// loot by character class. Only one provider can be registered at a time; a later call
+		/// replaces an earlier one.
+		///
+		/// readyCheck is optional. If given, it's polled (every ~250ms, up to a ~15s timeout) before
+		/// giving a new player's automatic chest, so the provider can wait for whatever it needs
+		/// (e.g. character creation to finish) before being asked to resolve a loadout. Without a
+		/// readyCheck, the provider is asked to resolve immediately, same timing as the base mod.
+		///
+		/// Call this from your addon's StartServerSide, once you have a reference to this mod's
+		/// system, e.g.:
+		///   sapi.ModLoader.GetModSystem&lt;StarterChestModSystem&gt;()?.RegisterLoadoutProvider(MyProvider, MyReadyCheck);
+		/// </summary>
+		public void RegisterLoadoutProvider(StarterChestLoadoutProvider provider, StarterChestReadyCheck readyCheck = null)
+		{
+			loadoutProvider = provider;
+			this.readyCheck = readyCheck;
 		}
 
 		TextCommandResult OnResetCommand(TextCommandCallingArgs args)
@@ -72,13 +91,12 @@ namespace StarterChest
 				return TextCommandResult.Error("Could not resolve a valid container block - check ContainerCode.");
 			}
 
-			string classCode = GetClassCode(target);
-			EffectiveLoadout loadout = ResolveLoadout(classCode, out bool usedClassLoadout);
+			StarterChestLoadout loadout = ResolveLoadout(target, out string displayName);
 
 			int? maxSlots = EstimateSlotCount(containerBlock);
 			List<ItemStack> stacks = BuildLootStacks(maxSlots ?? int.MaxValue, loadout);
 
-			string loadoutDesc = usedClassLoadout ? $"'{classCode}' class loadout" : "default loadout";
+			string loadoutDesc = string.IsNullOrEmpty(displayName) ? "default loadout" : $"'{displayName}' loadout";
 			if (stacks.Count == 0)
 			{
 				return TextCommandResult.Success($"No loot configured in the {loadoutDesc} (check FixedItems/RandomPool) - nothing would be given.");
@@ -97,10 +115,6 @@ namespace StarterChest
 
 			return TextCommandResult.Success(sb.ToString());
 		}
-
-		// The character class the player picked at creation, e.g. "hunter", "clockmaker",
-		// "commoner" - null if unset (shouldn't normally happen for a fully-created character).
-		static string GetClassCode(IServerPlayer player) => player.Entity.WatchedAttributes.GetString("characterClass", null);
 
 		void LoadConfig()
 		{
@@ -166,58 +180,6 @@ namespace StarterChest
 			}
 		}
 
-		// Loadouts live one-per-file under ModConfig/StarterChestClasses/, named "<classcode>.json"
-		// (e.g. "hunter.json"), instead of one big dictionary in the main config - so a mod author or
-		// community member adding support for a new class is just one file to drop in, and a server
-		// with many class mods installed doesn't end up with one unwieldy config file. The folder is
-		// seeded once from the packaged vanilla class defaults and never touched again afterwards,
-		// same as the main config; anything added later (built-in or drag-and-dropped) is picked up
-		// on every server start by scanning whatever's actually in the folder.
-		void LoadClassLoadouts()
-		{
-			string classDir = System.IO.Path.Combine(sapi.GetOrCreateDataPath("ModConfig"), ClassLoadoutsDirName);
-
-			if (!System.IO.Directory.Exists(classDir))
-			{
-				System.IO.Directory.CreateDirectory(classDir);
-				SeedPackagedClassLoadouts(classDir);
-			}
-
-			classLoadouts.Clear();
-			foreach (string filePath in System.IO.Directory.GetFiles(classDir, "*.json"))
-			{
-				string classCode = System.IO.Path.GetFileNameWithoutExtension(filePath).ToLowerInvariant();
-				try
-				{
-					ClassLoadout loadout = JsonConvert.DeserializeObject<ClassLoadout>(System.IO.File.ReadAllText(filePath));
-					if (loadout != null) classLoadouts[classCode] = loadout;
-				}
-				catch (Exception e)
-				{
-					sapi.Logger.Error("[StarterChest] Failed to parse class loadout '{0}': {1}. Skipping this file.", filePath, e.Message);
-				}
-			}
-
-			sapi.Logger.Notification("[StarterChest] Loaded {0} class loadout(s) from '{1}'.", classLoadouts.Count, classDir);
-		}
-
-		void SeedPackagedClassLoadouts(string classDir)
-		{
-			List<IAsset> assets = sapi.Assets.GetMany(PackagedClassLoadoutsPath, "starterchest");
-			foreach (IAsset asset in assets)
-			{
-				string destPath = System.IO.Path.Combine(classDir, System.IO.Path.GetFileName(asset.Location.Path));
-				try
-				{
-					System.IO.File.WriteAllBytes(destPath, asset.Data);
-				}
-				catch (Exception e)
-				{
-					sapi.Logger.Error("[StarterChest] Failed to seed class loadout '{0}': {1}", destPath, e.Message);
-				}
-			}
-		}
-
 		void OnPlayerNowPlaying(IServerPlayer byPlayer)
 		{
 			if (byPlayer.GetModData(ReceivedModDataKey, false))
@@ -225,38 +187,52 @@ namespace StarterChest
 				return;
 			}
 
-			byPlayer.SetModData(ReceivedModDataKey, true);
-			GiveStarterChest(byPlayer);
+			TryGiveWhenReady(byPlayer, 0);
 		}
 
-		// Resolved set of FixedItems/RandomPool/RandomPickCount/AllowDuplicatePicks/RandomMode to
-		// actually use for one chest - either a matching ClassLoadout, or the top-level config.
-		class EffectiveLoadout
-		{
-			public bool RandomMode;
-			public int RandomPickCount;
-			public bool AllowDuplicatePicks;
-			public List<LootEntry> FixedItems;
-			public List<LootEntry> RandomPool;
-		}
+		const int ReadyPollMs = 250;
+		const int ReadyTimeoutMs = 15000;
 
-		EffectiveLoadout ResolveLoadout(string classCode, out bool usedClassLoadout)
+		// Without a registered readyCheck, gives immediately on PlayerNowPlaying - same timing as
+		// the base mod always had. With one (e.g. registered by an addon that needs to wait for
+		// something, like character creation completing, before it can resolve a loadout), polls it
+		// briefly first, bounded by a timeout so a player is never stuck without a chest.
+		void TryGiveWhenReady(IServerPlayer player, int elapsedMs)
 		{
-			if (!string.IsNullOrEmpty(classCode) && classLoadouts.TryGetValue(classCode.ToLowerInvariant(), out ClassLoadout loadout))
+			// A player mid-character-creation is legitimately in the "Connected" state, not yet
+			// "Playing" - only bail out here on a genuine disconnect.
+			if (player.ConnectionState == EnumClientState.Offline)
 			{
-				usedClassLoadout = true;
-				return new EffectiveLoadout
-				{
-					RandomMode = loadout.RandomMode,
-					RandomPickCount = loadout.RandomPickCount,
-					AllowDuplicatePicks = loadout.AllowDuplicatePicks,
-					FixedItems = loadout.FixedItems,
-					RandomPool = loadout.RandomPool,
-				};
+				return;
 			}
 
-			usedClassLoadout = false;
-			return new EffectiveLoadout
+			if (readyCheck == null || readyCheck(player) || elapsedMs >= ReadyTimeoutMs)
+			{
+				player.SetModData(ReceivedModDataKey, true);
+				GiveStarterChest(player);
+				return;
+			}
+
+			sapi.World.RegisterCallback(_ => TryGiveWhenReady(player, elapsedMs + ReadyPollMs), ReadyPollMs);
+		}
+
+		// Uses the registered loadout provider (if any) to get a per-player override; falls back to
+		// the top-level config otherwise. displayName is whatever the provider supplied (e.g. a
+		// class name), or null when using the top-level config.
+		StarterChestLoadout ResolveLoadout(IServerPlayer player, out string displayName)
+		{
+			if (loadoutProvider != null)
+			{
+				StarterChestLoadoutResult result = loadoutProvider(player);
+				if (result?.Loadout != null)
+				{
+					displayName = result.DisplayName;
+					return result.Loadout;
+				}
+			}
+
+			displayName = null;
+			return new StarterChestLoadout
 			{
 				RandomMode = config.RandomMode,
 				RandomPickCount = config.RandomPickCount,
@@ -266,7 +242,7 @@ namespace StarterChest
 			};
 		}
 
-		List<ItemStack> BuildLootStacks(int maxSlots, EffectiveLoadout loadout)
+		List<ItemStack> BuildLootStacks(int maxSlots, StarterChestLoadout loadout)
 		{
 			var result = new List<ItemStack>();
 
@@ -426,7 +402,7 @@ namespace StarterChest
 
 		bool GiveStarterChest(IServerPlayer player)
 		{
-			EffectiveLoadout loadout = ResolveLoadout(GetClassCode(player), out _);
+			StarterChestLoadout loadout = ResolveLoadout(player, out string displayName);
 
 			// Cheap pre-check so we don't place a chest at all when nothing could ever be given -
 			// the real, capacity-aware loot list is only known once the container is placed below.
@@ -488,8 +464,37 @@ namespace StarterChest
 			be.MarkDirty(true, null);
 
 			sapi.Logger.Notification("[StarterChest] Gave {0} a starter chest ({1}) at {2} ({3} item stack(s)).", player.PlayerName, containerBlock.Code, pos, stacks.Count);
-			player.SendMessage(GlobalConstants.GeneralChatGroup, Lang.GetL(player.LanguageCode, "starterchest:chest-appeared"), EnumChatType.Notification, null);
+			player.SendMessage(GlobalConstants.GeneralChatGroup, BuildAppearedMessage(player, containerBlock, pos, displayName), EnumChatType.Notification, null);
 			return true;
+		}
+
+		// Resolves via Lang.GetL first (so real dedicated servers with mod translations loaded get
+		// a properly localized message), but falls back to a hardcoded English string if that key
+		// didn't resolve (GetL returns the raw key on a miss) - mod-added lang entries aren't
+		// always guaranteed to be loaded server-side, and a player should never see a raw lang key.
+		string BuildAppearedMessage(IServerPlayer player, Block containerBlock, BlockPos pos, string displayName)
+		{
+			// The block's own display name (e.g. "Chest", "Trunk", or whatever a modded container
+			// calls itself), lowercased to read naturally mid-sentence - so the message always
+			// matches the actually-configured ContainerCode instead of assuming "chest".
+			string containerName = containerBlock.GetPlacedBlockName(sapi.World, pos).ToLowerInvariant();
+
+			if (!string.IsNullOrEmpty(displayName))
+			{
+				string message = ResolveWithFallback(player.LanguageCode, "starterchest:chest-appeared-class", null, displayName, containerName);
+				return message ?? $"A starter {displayName} {containerName} has appeared nearby!";
+			}
+
+			return ResolveWithFallback(player.LanguageCode, "starterchest:chest-appeared", null, containerName)
+				?? $"A starter {containerName} has appeared nearby!";
+		}
+
+		// Returns null (or fallback, if given) instead of the raw key when a translation is missing,
+		// unlike Lang.GetL itself which returns the key as-is on a miss.
+		static string ResolveWithFallback(string langCode, string key, string fallback, params object[] args)
+		{
+			string resolved = Lang.GetL(langCode, key, args);
+			return resolved == key ? fallback : resolved;
 		}
 
 		void FillInventory(BlockEntityGenericTypedContainer be, List<ItemStack> stacks)

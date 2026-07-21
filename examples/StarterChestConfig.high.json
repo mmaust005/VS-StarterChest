@@ -1,0 +1,23 @@
+{
+	// High tier - a trunk with tin-bronze-age tools guaranteed and possible.
+	"ContainerCode": "game:trunk",
+	"ContainerOrientation": "",
+	"RandomMode": true,
+	"RandomPickCount": 8,
+	"AllowDuplicatePicks": false,
+	"FixedItems": [
+		{ "Code": "game:knife-generic-tinbronze", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1 },
+		{ "Code": "game:pickaxe-tinbronze", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1 },
+		{ "Code": "game:bread-rye-perfect", "Type": "item", "MinQuantity": 2, "MaxQuantity": 3 },
+		{ "Code": "game:cheese-cheddar-1slice", "Type": "item", "MinQuantity": 2, "MaxQuantity": 3 }
+	],
+	"RandomPool": [
+		{ "Code": "game:firestarter", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 },
+		{ "Code": "game:rope", "Type": "item", "MinQuantity": 2, "MaxQuantity": 4, "Weight": 15 },
+		{ "Code": "game:axe-felling-tinbronze", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 },
+		{ "Code": "game:hammer-tinbronze", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 },
+		{ "Code": "game:shears-tinbronze", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 10 },
+		{ "Code": "game:chisel-tinbronze", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 10 },
+		{ "Code": "game:spear-generic-tinbronze", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 10 }
+	]
+}

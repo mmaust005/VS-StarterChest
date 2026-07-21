@@ -1,0 +1,20 @@
+{
+	// Medium tier - a normal chest with copper-age tools guaranteed and possible.
+	"ContainerCode": "game:chest",
+	"ContainerOrientation": "",
+	"RandomMode": true,
+	"RandomPickCount": 6,
+	"AllowDuplicatePicks": false,
+	"FixedItems": [
+		{ "Code": "game:knife-generic-copper", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1 },
+		{ "Code": "game:bread-rye-perfect", "Type": "item", "MinQuantity": 1, "MaxQuantity": 2 }
+	],
+	"RandomPool": [
+		{ "Code": "game:firestarter", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 },
+		{ "Code": "game:rope", "Type": "item", "MinQuantity": 1, "MaxQuantity": 2, "Weight": 15 },
+		{ "Code": "game:cheese-cheddar-1slice", "Type": "item", "MinQuantity": 1, "MaxQuantity": 3, "Weight": 20 },
+		{ "Code": "game:pickaxe-copper", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 },
+		{ "Code": "game:axe-felling-copper", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 },
+		{ "Code": "game:hammer-copper", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 10 }
+	]
+}

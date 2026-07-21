@@ -12,6 +12,9 @@
 - A public addon API (`StarterChestModSystem.RegisterLoadoutProvider`) lets other mods override
   what a specific player gets - e.g. varying the loadout by character class - without forking or
   duplicating this mod's placement/container logic. See the README's "Addons" section.
+- `examples/` has 3 complete, ready-to-use configs (low/medium/high tier - reed chest with
+  stone-age basics, chest with copper tools, trunk with tin-bronze tools) to copy from. Not
+  loaded by the mod.
 
 ### Changed
 - `RandomPickCount` now automatically caps itself to the real container's remaining slots (read

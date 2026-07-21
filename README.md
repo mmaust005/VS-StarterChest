@@ -104,13 +104,25 @@ Each entry (`FixedItems` and `RandomPool`) supports:
 If a configured code belongs to a mod that isn't installed, that entry is skipped and a warning
 is logged - it won't crash the chest or break other entries. The container has a limited number
 of slots (8 for the default reed chest, 16 for a normal chest, 36 for a trunk, varies for modded
-containers). `FixedItems`
-are given first; `RandomPickCount` then automatically caps itself to whatever slots are left in
-*that specific container* (read from the real container once placed, so this works correctly for
-modded containers too, not just the vanilla chest/trunk) - so you won't get a log warning from
-this in normal use. The only case still worth a warning is `FixedItems` alone exceeding the
-container's slots, since those are meant to be guaranteed and can't be auto-capped without
-breaking that guarantee.
+containers). `FixedItems` are given first; `RandomPickCount` then automatically caps itself to
+whatever slots are left in *that specific container* (read from the real container once placed,
+so this works correctly for modded containers too, not just the vanilla chest/trunk) - so you
+won't get a log warning from this in normal use. The only case still worth a warning is
+`FixedItems` alone exceeding the container's slots, since those are meant to be guaranteed and
+can't be auto-capped without breaking that guarantee.
+
+### Example configs
+
+[`examples/`](examples/) has 3 complete, ready-to-use configs at different tiers - not loaded by
+the mod, just there to copy from:
+
+| Tier | Container | Gear |
+|---|---|---|
+| [`low`](examples/StarterChestConfig.low.json) | Reed chest (8 slots) | Stone-age basics - same as the packaged default |
+| [`medium`](examples/StarterChestConfig.medium.json) | Chest (16 slots) | Copper-age tools |
+| [`high`](examples/StarterChestConfig.high.json) | Trunk (36 slots) | Tin-bronze-age tools |
+
+To use one, copy its contents over `ModConfig/StarterChestConfig.json` and restart the server.
 
 ### How weighting works
 

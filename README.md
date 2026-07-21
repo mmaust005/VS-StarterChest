@@ -1,7 +1,5 @@
 # Starter Chest
 
-![Starter Chest banner](docs/banner.png)
-
 Gives every new player on a Vintage Story 1.22.3 server a one-time chest of starting supplies,
 placed on the ground near them the first time they spawn - a configurable, mod-aware starter kit.
 

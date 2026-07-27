@@ -51,22 +51,35 @@
 	<!-- Builds a clean release zip (mod files only - no source, docs, or .pdb) at release\StarterChest.zip.
 	     Run explicitly with: dotnet build -c Release -t:PackMod -->
 	<Target Name="PackMod" DependsOnTargets="Build">
+		<!-- Read the version straight out of modinfo.json so the zip name can never drift from
+		     what's actually declared inside it. -->
+		<ReadLinesFromFile File="modinfo.json">
+			<Output TaskParameter="Lines" ItemName="ModInfoLines" />
+		</ReadLinesFromFile>
 		<PropertyGroup>
+			<ModInfoText>@(ModInfoLines, ' ')</ModInfoText>
+			<ModVersion>$([System.Text.RegularExpressions.Regex]::Match($(ModInfoText), '"version"\s*:\s*"([^"]+)"').Groups[1].Value)</ModVersion>
 			<PackModStageDir>$(MSBuildProjectDirectory)\release\stage\</PackModStageDir>
 			<PackModOutputDir>$(MSBuildProjectDirectory)\release\</PackModOutputDir>
-			<PackModZipFile>$(PackModOutputDir)StarterChest.zip</PackModZipFile>
+			<PackModZipFile>$(PackModOutputDir)StarterChest_$(ModVersion).zip</PackModZipFile>
 		</PropertyGroup>
 		<ItemGroup>
 			<PackModRootFiles Include="modinfo.json" />
 			<PackModRootFiles Include="modicon.png" Condition="Exists('modicon.png')" />
 			<PackModRootFiles Include="README.md" Condition="Exists('README.md')" />
+			<PackModRootFiles Include="LICENSE" Condition="Exists('LICENSE')" />
+			<!-- Excludes dev-only docs that might live under assets\, but NOTICE.md is a real
+			     runtime file - the README points players at assets/NOTICE.md for artwork licensing,
+			     so it must survive into the package at that same path (see PackModNoticeFile below). -->
 			<PackModAssetFiles Include="assets\**\*.*" Exclude="assets\**\*.md" Condition="Exists('assets')" />
+			<PackModNoticeFile Include="assets\NOTICE.md" Condition="Exists('assets\NOTICE.md')" />
 		</ItemGroup>
 		<RemoveDir Directories="$(PackModStageDir)" />
 		<MakeDir Directories="$(PackModStageDir)" />
 		<Copy SourceFiles="$(TargetDir)StarterChest.dll" DestinationFolder="$(PackModStageDir)" />
 		<Copy SourceFiles="@(PackModRootFiles)" DestinationFolder="$(PackModStageDir)" />
 		<Copy SourceFiles="@(PackModAssetFiles)" DestinationFolder="$(PackModStageDir)assets\%(RecursiveDir)" />
+		<Copy SourceFiles="@(PackModNoticeFile)" DestinationFolder="$(PackModStageDir)assets\" />
 		<Delete Files="$(PackModZipFile)" Condition="Exists('$(PackModZipFile)')" />
 		<ZipDirectory SourceDirectory="$(PackModStageDir)" DestinationFile="$(PackModZipFile)" />
 		<RemoveDir Directories="$(PackModStageDir)" />

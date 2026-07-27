@@ -210,10 +210,12 @@ public void RegisterLoadoutProvider(StarterChestLoadoutProvider provider, Starte
   an optional, already-localized `DisplayName` shown in the "A starter {DisplayName} chest has
   appeared nearby!" message and in `/starterchest preview` output). Return `null` to fall back to
   the top-level config for that player.
-- `readyCheck` is optional. If given, it's polled briefly (bounded by a timeout) before giving a
-  new player's automatic chest, so the provider can wait for whatever it needs - e.g. character
-  creation to finish - before being asked to resolve anything. Only one provider can be registered
-  at a time.
+- `readyCheck` is optional. If given, it's polled every ~250ms, for as long as it takes, before
+  giving a new player's automatic chest - the chest is never given until it passes, so the
+  provider can safely wait for whatever it needs (e.g. character creation to finish) without risk
+  of `provider` being asked to resolve a loadout too early. A `readyCheck` that never passes holds
+  that player's chest back indefinitely (logged periodically as a warning) rather than falling
+  back to a possibly-wrong loadout. Only one provider can be registered at a time.
 
 Call it from your addon's `StartServerSide`, once the base mod is loaded:
 

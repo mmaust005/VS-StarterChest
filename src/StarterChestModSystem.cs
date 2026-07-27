@@ -50,10 +50,11 @@ namespace StarterChest
 		// Lets another mod supply a per-player loadout override instead of the top-level
 		// FixedItems/RandomPool/RandomPickCount/AllowDuplicatePicks, e.g. to vary loot by
 		// character class. Only one provider at a time; a later call replaces an earlier one.
-		// readyCheck is optional - polled (every ~250ms, up to a ~15s timeout) before giving a new
+		// readyCheck is optional - polled every ~250ms, for as long as it takes, before giving a new
 		// player's automatic chest, so the provider can wait for something (e.g. character
-		// creation finishing) before being asked to resolve a loadout. Call from an addon's
-		// StartServerSide:
+		// creation finishing) before being asked to resolve a loadout. The chest is never given
+		// until it passes (or there is no readyCheck), so a player can never be handed a loadout
+		// resolved from stale/default state. Call from an addon's StartServerSide:
 		//   sapi.ModLoader.GetModSystem<StarterChestModSystem>()?.RegisterLoadoutProvider(MyProvider, MyReadyCheck);
 		public void RegisterLoadoutProvider(StarterChestLoadoutProvider provider, StarterChestReadyCheck readyCheck = null)
 		{
@@ -71,7 +72,7 @@ namespace StarterChest
 			{
 				return TextCommandResult.Success($"Reset and gave {target.PlayerName} a fresh starter chest.");
 			}
-			return TextCommandResult.Success($"Cleared {target.PlayerName}'s starter-chest flag, but no loot is configured (check FixedItems/RandomPool) so no chest was given.");
+			return TextCommandResult.Success($"Marked {target.PlayerName} as having received a chest, but no loot is configured (check FixedItems/RandomPool) so no chest was given.");
 		}
 
 		TextCommandResult OnPreviewCommand(TextCommandCallingArgs args)
@@ -183,27 +184,40 @@ namespace StarterChest
 		}
 
 		const int ReadyPollMs = 250;
-		const int ReadyTimeoutMs = 15000;
+		// Not a giveup point - just how often to log a diagnostic warning while still waiting, so a
+		// readyCheck that never passes (a bug, a mod conflict, a future game update breaking an
+		// assumption it relies on) shows up clearly in the log instead of silently stalling one
+		// player's chest forever with nothing to go on.
+		const int ReadyStillWaitingLogMs = 60000;
 
-		// No registered readyCheck: give immediately on PlayerNowPlaying. With one, poll it first
-		// (bounded by a timeout) so the provider can wait for something before resolving a loadout.
+		// No registered readyCheck: give immediately on PlayerNowPlaying. With one, poll it for as
+		// long as it takes - the chest is never given until it passes, so a player can never be
+		// handed a loadout resolved from stale/default state (e.g. the character-creation default
+		// class before the real pick lands).
 		void TryGiveWhenReady(IServerPlayer player, int elapsedMs)
 		{
 			// Mid-character-creation is legitimately "Connected", not yet "Playing" - only bail
-			// out on a genuine disconnect.
+			// out on a genuine disconnect. Nothing is marked received, so a reconnect just resumes
+			// polling from zero via OnPlayerNowPlaying, same as any other new-ish player.
 			if (player.ConnectionState == EnumClientState.Offline)
 			{
 				return;
 			}
 
-			if (readyCheck == null || readyCheck(player) || elapsedMs >= ReadyTimeoutMs)
+			if (readyCheck == null || readyCheck(player))
 			{
 				player.SetModData(ReceivedModDataKey, true);
 				GiveStarterChest(player);
 				return;
 			}
 
-			sapi.World.RegisterCallback(_ => TryGiveWhenReady(player, elapsedMs + ReadyPollMs), ReadyPollMs);
+			int nextElapsedMs = elapsedMs + ReadyPollMs;
+			if (nextElapsedMs % ReadyStillWaitingLogMs == 0)
+			{
+				sapi.Logger.Warning("[StarterChest] Still waiting on readyCheck for {0} after {1}ms - if this keeps recurring, the registered readyCheck may be broken or conflicting, and this player's starter chest is being held back indefinitely until it passes.", player.PlayerName, nextElapsedMs);
+			}
+
+			sapi.World.RegisterCallback(_ => TryGiveWhenReady(player, nextElapsedMs), ReadyPollMs);
 		}
 
 		// Uses the registered loadout provider if present, else the top-level config. displayName

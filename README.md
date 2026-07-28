@@ -6,10 +6,9 @@ placed on the ground near them the first time they spawn - a configurable, mod-a
 - The container sizes itself automatically by default - a small reed chest (8 slots) if that's
   enough to hold whatever's guaranteed, growing to a chest (16) or trunk (36) as addons like Class
   Loadouts or World Conditions contribute more guaranteed items, so nothing gets silently dropped.
-  Still fully configurable to a specific container instead (the regular chest, trunk, or any other
-  placeable container block, including modded ones) if you'd rather pin one size. Placed once per
-  player and never refilled or respawned. Faces a random direction by default, or a fixed one if
-  configured.
+  You can still pin a specific container instead (the regular chest, trunk, or any other placeable
+  container block, including modded ones). Placed once per player and never refilled or
+  respawned, facing a random direction by default or a fixed one if configured.
 - Loot combines guaranteed `FixedItems` with a weighted `RandomPool`, auto-fit to however many
   slots the chosen container actually has - no manual tuning needed for modded containers.
 - Each player is tracked individually (server-side player data), so leaving and rejoining, or
@@ -70,12 +69,12 @@ the server/world - it will be recreated from the packaged file.
 - **ContainerCode** - which block to place as the starter container, *without* an orientation
   suffix. Any valid placeable container block code works, including ones from other mods. Falls
   back to the default chest, with a logged error, if the code is invalid or not a container.
-  Defaults to the special value `"auto"`: picks the smallest of the reed basket (8 slots),
-  `"game:chest"` (16), or `"game:trunk"` (36) that can fit however many `FixedItems` actually end
-  up guaranteed for that player - including anything addons like Class Loadouts or World
-  Conditions add on top of the top-level config - plus a little headroom for random picks, rather
-  than always using one fixed size. Set this to a specific code (e.g. `"game:stationarybasket"`)
-  to opt back out and always use exactly that container, same as before "auto" existed.
+  Defaults to the special value `"auto"`, which picks the smallest of the reed basket (8 slots),
+  `"game:chest"` (16), or `"game:trunk"` (36) that fits however many `FixedItems` end up
+  guaranteed for that player - including anything added by addons like Class Loadouts or World
+  Conditions - plus a little headroom for random picks. Set this to a specific code instead (e.g.
+  `"game:stationarybasket"`) to opt back out and always use exactly that container, same as before
+  `"auto"` existed.
 - **ContainerOrientation** - which way the container faces: `"north"`, `"east"`, `"south"`, or
   `"west"`. Leave it as `""` (default) to pick a random direction for each player - it's purely
   cosmetic and has no effect on slot count or any other behavior. An invalid value falls back to
@@ -111,8 +110,8 @@ Each entry (`FixedItems` and `RandomPool`) supports:
 If a configured code belongs to a mod that isn't installed, that entry is skipped and a warning
 is logged - it won't crash the chest or break other entries. The container has a limited number
 of slots (8 for the reed basket, 16 for a normal chest, 36 for a trunk, varies for modded
-containers) - with `ContainerCode: "auto"` (the default), this is exactly what picks which of
-those three to use. `FixedItems` are given first; `RandomPickCount` then automatically caps itself
+containers) - `ContainerCode: "auto"` (the default) is exactly what picks between those three.
+`FixedItems` are given first; `RandomPickCount` then automatically caps itself
 to whatever slots are left in *that specific container* (read from the real container once
 placed, so this works correctly for modded containers too, not just the vanilla chest/trunk) - so
 you won't get a log warning from this in normal use. The only case still worth a warning is
@@ -254,7 +253,7 @@ public void RegisterLoadoutModifier(string modifierId, StarterChestLoadoutModifi
 - Every registered modifier runs, in registration order, each receiving the previous one's
   result - unlike providers, any number of modifiers can be registered and they all apply.
   `modifierId` only needs to be unique enough to identify your addon in the log if something goes
-  wrong; a collision just logs a warning; both still run.
+  wrong - a collision just logs a warning, and both modifiers still run.
 - A `provider`, `readyCheck`, or `modifier` that throws is logged and safely contained rather than
   breaking chest placement for that player: a provider failure falls back to the top-level config,
   a modifier failure just skips that modifier, and a `readyCheck` failure is treated as not-ready

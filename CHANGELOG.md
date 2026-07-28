@@ -17,7 +17,7 @@
   how many addons are installed. A single install with no addons and the default loot list still
   gets the same reed basket as before - `"auto"` only grows the container when something actually
   needs the extra room. Set `ContainerCode` to a specific code, as before, to opt out and always
-  pin one container.
+  pick one container.
 - `RegisterLoadoutProvider`'s optional `readyCheck` now polls until it actually passes instead of
   giving up after a fixed timeout, so an addon-provided loadout (e.g. by character class) can
   never be resolved from stale/default state. A `readyCheck`, loadout provider, or loadout

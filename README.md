@@ -1,11 +1,14 @@
 # Starter Chest
 
-Gives every new player on a Vintage Story 1.22.3 server a one-time chest of starting supplies,
+Gives every new player on a Vintage Story 1.22.3+ server a one-time chest of starting supplies,
 placed on the ground near them the first time they spawn - a configurable, mod-aware starter kit.
 
-- The container defaults to a small reed chest (8 slots) but is configurable (the regular chest,
-  trunk, or any other placeable container block, including modded ones), placed once per player
-  and never refilled or respawned. It faces a random direction by default, or a fixed one if
+- The container sizes itself automatically by default - a small reed chest (8 slots) if that's
+  enough to hold whatever's guaranteed, growing to a chest (16) or trunk (36) as addons like Class
+  Loadouts or World Conditions contribute more guaranteed items, so nothing gets silently dropped.
+  Still fully configurable to a specific container instead (the regular chest, trunk, or any other
+  placeable container block, including modded ones) if you'd rather pin one size. Placed once per
+  player and never refilled or respawned. Faces a random direction by default, or a fixed one if
   configured.
 - Loot combines guaranteed `FixedItems` with a weighted `RandomPool`, auto-fit to however many
   slots the chosen container actually has - no manual tuning needed for modded containers.
@@ -175,7 +178,7 @@ eligible" means for the draws after the first**:
 
 ## Building
 
-The game (1.22.3) targets .NET 10, which needs the .NET 10 SDK to compile against
+The game (1.22.x) targets .NET 10, which needs the .NET 10 SDK to compile against
 `VintagestoryAPI.dll`/`VSSurvivalMod.dll`. If your machine's default `dotnet` is older, install a
 .NET 10 SDK side by side (e.g. under `%USERPROFILE%\dotnet-sdk10`) - it won't affect the system
 default unless you put it on PATH. Build with that SDK explicitly:

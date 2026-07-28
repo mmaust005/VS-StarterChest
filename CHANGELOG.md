@@ -8,14 +8,16 @@
   of replacing it outright - e.g. adding cold-weather gear on top of whatever a class-based
   provider picked. Multiple modifiers can be registered and all run, in registration order. See
   the README's "Addons" section.
-- `ContainerCode` accepts a new special value, `"auto"` (now the packaged default), which picks
-  the smallest of the reed basket/chest/trunk that can fit however many `FixedItems` actually end
-  up guaranteed for a given player - including whatever addons like Class Loadouts or World
-  Conditions contribute - instead of always using one fixed container regardless of how many
-  addons are installed. Set `ContainerCode` to a specific code to opt out and pin a container,
-  same as before "auto" existed.
 
 ### Changed
+- The container now sizes itself automatically by default - the packaged config's `ContainerCode`
+  is now `"auto"`, which picks the smallest of the reed basket/chest/trunk that fits however many
+  `FixedItems` actually end up guaranteed for a given player, including whatever addons like Class
+  Loadouts or World Conditions contribute, instead of always placing one fixed size regardless of
+  how many addons are installed. A single install with no addons and the default loot list still
+  gets the same reed basket as before - `"auto"` only grows the container when something actually
+  needs the extra room. Set `ContainerCode` to a specific code, as before, to opt out and always
+  pin one container.
 - `RegisterLoadoutProvider`'s optional `readyCheck` now polls until it actually passes instead of
   giving up after a fixed timeout, so an addon-provided loadout (e.g. by character class) can
   never be resolved from stale/default state. A `readyCheck`, loadout provider, or loadout

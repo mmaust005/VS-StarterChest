@@ -19,9 +19,11 @@ namespace StarterChest
 		ICoreServerAPI sapi;
 		StarterChestConfig config;
 		readonly HashSet<string> warnedMissingCodes = new HashSet<string>();
+		readonly HashSet<string> warnedThrowingReadyCheckPlayers = new HashSet<string>();
 
 		StarterChestLoadoutProvider loadoutProvider;
 		StarterChestReadyCheck readyCheck;
+		readonly List<(string Id, StarterChestLoadoutModifier Modifier)> loadoutModifiers = new List<(string, StarterChestLoadoutModifier)>();
 
 		public override bool ShouldLoad(EnumAppSide forSide) => forSide == EnumAppSide.Server;
 
@@ -62,6 +64,22 @@ namespace StarterChest
 			this.readyCheck = readyCheck;
 		}
 
+		// Lets another mod append to or adjust the loadout the provider (or top-level config)
+		// already resolved, instead of replacing it outright - e.g. adding cold-weather gear on top
+		// of whatever a class-based provider picked. Every registered modifier runs, in
+		// registration order; a modifierId collision just logs a warning; both still run. Call from
+		// an addon's StartServerSide:
+		//   sapi.ModLoader.GetModSystem<StarterChestModSystem>()?.RegisterLoadoutModifier("mymod:mymodifier", MyModifier);
+		public void RegisterLoadoutModifier(string modifierId, StarterChestLoadoutModifier modifier)
+		{
+			if (loadoutModifiers.Any(m => m.Id == modifierId))
+			{
+				sapi.Logger.Warning("[StarterChest] A loadout modifier with id '{0}' is already registered - both will run, but this likely means two different addons picked the same id by mistake.", modifierId);
+			}
+
+			loadoutModifiers.Add((modifierId, modifier));
+		}
+
 		TextCommandResult OnResetCommand(TextCommandCallingArgs args)
 		{
 			var target = (IServerPlayer)args[0];
@@ -79,13 +97,16 @@ namespace StarterChest
 		{
 			var target = (IServerPlayer)args[0];
 
-			Block containerBlock = ResolveContainerBlock();
+			StarterChestLoadout loadout = ResolveLoadout(target, out string displayName);
+
+			// Resolved after the loadout, not before - auto container sizing (see ResolveContainerBlock)
+			// needs to know how many FixedItems are guaranteed before it can pick a container, so this
+			// mirrors the real give-flow's order exactly.
+			Block containerBlock = ResolveContainerBlock(loadout.FixedItems.Count);
 			if (containerBlock == null)
 			{
 				return TextCommandResult.Error("Could not resolve a valid container block - check ContainerCode.");
 			}
-
-			StarterChestLoadout loadout = ResolveLoadout(target, out string displayName);
 
 			int? maxSlots = EstimateSlotCount(containerBlock);
 			List<ItemStack> stacks = BuildLootStacks(maxSlots ?? int.MaxValue, loadout);
@@ -204,7 +225,7 @@ namespace StarterChest
 				return;
 			}
 
-			if (readyCheck == null || readyCheck(player))
+			if (readyCheck == null || IsReadyOrLoggedFalse(player))
 			{
 				player.SetModData(ReceivedModDataKey, true);
 				GiveStarterChest(player);
@@ -220,13 +241,50 @@ namespace StarterChest
 			sapi.World.RegisterCallback(_ => TryGiveWhenReady(player, nextElapsedMs), ReadyPollMs);
 		}
 
-		// Uses the registered loadout provider if present, else the top-level config. displayName
-		// is whatever the provider supplied, or null for the top-level config.
+		// A throwing readyCheck is treated the same as one that just keeps returning false -
+		// polling continues rather than crashing the loop or giving the chest early with
+		// unresolved state. Logged once per player (like warnedMissingCodes below), not every
+		// ~250ms poll, since a persistently throwing check would otherwise spam the log.
+		bool IsReadyOrLoggedFalse(IServerPlayer player)
+		{
+			try
+			{
+				return readyCheck(player);
+			}
+			catch (Exception e)
+			{
+				if (warnedThrowingReadyCheckPlayers.Add(player.PlayerUID))
+				{
+					sapi.Logger.Error("[StarterChest] The registered readyCheck threw for {0}: {1}. Treating as not-ready; this will keep happening on every poll but won't be logged again for this player.", player.PlayerName, e);
+				}
+				return false;
+			}
+		}
+
+		// Uses the registered loadout provider if present, else the top-level config, then runs
+		// every registered modifier over the result. displayName is whatever the provider supplied,
+		// or null for the top-level config - modifiers don't affect it.
 		StarterChestLoadout ResolveLoadout(IServerPlayer player, out string displayName)
+		{
+			StarterChestLoadout baseLoadout = ResolveBaseLoadout(player, out displayName);
+			return RunModifiers(player, baseLoadout.Clone());
+		}
+
+		StarterChestLoadout ResolveBaseLoadout(IServerPlayer player, out string displayName)
 		{
 			if (loadoutProvider != null)
 			{
-				StarterChestLoadoutResult result = loadoutProvider(player);
+				StarterChestLoadoutResult result;
+				try
+				{
+					result = loadoutProvider(player);
+				}
+				catch (Exception e)
+				{
+					sapi.Logger.Error("[StarterChest] The registered loadout provider threw for {0}: {1}. Falling back to the top-level config for this chest.", player.PlayerName, e);
+					result = null;
+				}
+
 				if (result?.Loadout != null)
 				{
 					displayName = result.DisplayName;
@@ -243,6 +301,27 @@ namespace StarterChest
 				FixedItems = config.FixedItems,
 				RandomPool = config.RandomPool,
 			};
+		}
+
+		// loadout is already a private copy (see Clone() at the ResolveLoadout call site) that
+		// modifiers are free to mutate directly. One broken modifier is logged and skipped -
+		// leaving the loadout as it was going into that modifier - rather than blocking the rest of
+		// the pipeline or chest placement.
+		StarterChestLoadout RunModifiers(IServerPlayer player, StarterChestLoadout loadout)
+		{
+			foreach ((string id, StarterChestLoadoutModifier modifier) in loadoutModifiers)
+			{
+				try
+				{
+					loadout = modifier(player, loadout) ?? loadout;
+				}
+				catch (Exception e)
+				{
+					sapi.Logger.Error("[StarterChest] Loadout modifier '{0}' threw for {1}: {2}. Skipping this modifier.", id, player.PlayerName, e);
+				}
+			}
+
+			return loadout;
 		}
 
 		List<ItemStack> BuildLootStacks(int maxSlots, StarterChestLoadout loadout)
@@ -332,11 +411,35 @@ namespace StarterChest
 		const string DefaultContainerCode = "game:chest";
 		static readonly string[] Orientations = { "north", "east", "south", "west" };
 
-		Block ResolveContainerBlock()
+		// "auto" (case-insensitive) picks the smallest of these, in order, that can hold
+		// guaranteedItemCount plus a little headroom for random picks - not just a bare fit -
+		// so a config seeded fresh (no manual ContainerCode tuning) still scales itself up as
+		// addons contribute more guaranteed items, instead of silently dropping them.
+		const string AutoContainerSentinel = "auto";
+		const int AutoContainerRandomHeadroom = 2;
+		static readonly (string Code, int Slots)[] AutoContainerLadder =
+		{
+			("game:stationarybasket", 8),
+			("game:chest", 16),
+			("game:trunk", 36),
+		};
+
+		// guaranteedItemCount is only used for "auto" sizing - pass the resolved loadout's
+		// FixedItems.Count. Irrelevant (and safe to omit) for an explicit ContainerCode.
+		Block ResolveContainerBlock(int guaranteedItemCount = 0)
 		{
 			// Picked once per chest so a fixed ContainerOrientation applies to both the
 			// configured code and the fallback, instead of re-rolling for each.
 			string orientation = PickOrientation();
+
+			if (string.Equals(config.ContainerCode, AutoContainerSentinel, StringComparison.OrdinalIgnoreCase))
+			{
+				Block auto = ResolveAutoContainerBlock(guaranteedItemCount, orientation);
+				if (auto != null) return auto;
+
+				sapi.Logger.Error("[StarterChest] ContainerCode \"auto\" could not resolve any container in its ladder - falling back to the default chest ('{0}').", DefaultContainerCode);
+				return ResolveContainerBlockForBaseCode(DefaultContainerCode, orientation);
+			}
 
 			Block block = ResolveContainerBlockForBaseCode(config.ContainerCode, orientation);
 			if (block != null)
@@ -346,6 +449,26 @@ namespace StarterChest
 
 			sapi.Logger.Error("[StarterChest] Configured ContainerCode '{0}' is not a valid container block - falling back to the default chest ('{1}').", config.ContainerCode, DefaultContainerCode);
 			return ResolveContainerBlockForBaseCode(DefaultContainerCode, orientation);
+		}
+
+		// Walks the ladder smallest-first, returning the first container roomy enough for
+		// guaranteedItemCount + headroom. If even the largest isn't enough, returns the largest
+		// one that resolved anyway - BuildLootStacks' existing overflow warning still catches and
+		// safely truncates whatever doesn't fit, this just gets as close as the ladder allows.
+		Block ResolveAutoContainerBlock(int guaranteedItemCount, string orientation)
+		{
+			Block largestResolved = null;
+
+			foreach ((string code, int slots) in AutoContainerLadder)
+			{
+				Block candidate = ResolveContainerBlockForBaseCode(code, orientation);
+				if (candidate == null) continue;
+
+				largestResolved = candidate;
+				if (slots >= guaranteedItemCount + AutoContainerRandomHeadroom) return candidate;
+			}
+
+			return largestResolved;
 		}
 
 		Block ResolveContainerBlockForBaseCode(string baseCode, string orientation)
@@ -411,7 +534,7 @@ namespace StarterChest
 				|| (loadout.RandomMode && loadout.RandomPool.Count > 0 && loadout.RandomPickCount > 0);
 			if (!anyPossibleLoot) return false;
 
-			Block containerBlock = ResolveContainerBlock();
+			Block containerBlock = ResolveContainerBlock(loadout.FixedItems.Count);
 			if (containerBlock == null)
 			{
 				sapi.Logger.Error("[StarterChest] Could not find the default chest block either - aborting starter chest placement.");

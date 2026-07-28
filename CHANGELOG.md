@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+- A second public addon API, `StarterChestModSystem.RegisterLoadoutModifier`, lets an addon
+  append to or adjust the loadout a provider (or the top-level config) already resolved, instead
+  of replacing it outright - e.g. adding cold-weather gear on top of whatever a class-based
+  provider picked. Multiple modifiers can be registered and all run, in registration order. See
+  the README's "Addons" section.
+- `ContainerCode` accepts a new special value, `"auto"` (now the packaged default), which picks
+  the smallest of the reed basket/chest/trunk that can fit however many `FixedItems` actually end
+  up guaranteed for a given player - including whatever addons like Class Loadouts or World
+  Conditions contribute - instead of always using one fixed container regardless of how many
+  addons are installed. Set `ContainerCode` to a specific code to opt out and pin a container,
+  same as before "auto" existed.
+
+### Changed
+- `RegisterLoadoutProvider`'s optional `readyCheck` now polls until it actually passes instead of
+  giving up after a fixed timeout, so an addon-provided loadout (e.g. by character class) can
+  never be resolved from stale/default state. A `readyCheck`, loadout provider, or loadout
+  modifier that throws is now logged and safely contained instead of breaking chest placement for
+  that player - a `readyCheck` failure is treated as not-ready (and retried), a provider failure
+  falls back to the top-level config, and a modifier failure just skips that modifier.
+
 ## 1.1.0
 
 ### Added

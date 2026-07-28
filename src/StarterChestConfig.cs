@@ -16,6 +16,8 @@ namespace StarterChest
 
 		// Relative chance of being picked when RandomMode is on. Ignored for FixedItems.
 		public int Weight = 100;
+
+		public LootEntry Clone() => new LootEntry { Code = Code, Type = Type, MinQuantity = MinQuantity, MaxQuantity = MaxQuantity, Weight = Weight };
 	}
 
 	public class StarterChestConfig

@@ -1,5 +1,6 @@
 {
-	// Low tier - a small reed chest with only stone-age basics. This is the packaged default -
+	// Low tier - a small reed chest with only stone-age basics. Same loot as the packaged
+	// default, but with ContainerCode pinned to the reed basket explicitly instead of "auto" -
 	// included here for comparison, not because it's special.
 	"ContainerCode": "game:stationarybasket",
 	"ContainerOrientation": "",

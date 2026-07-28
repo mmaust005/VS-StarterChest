@@ -52,7 +52,7 @@ the server/world - it will be recreated from the packaged file.
 
 ```json
 {
-  "ContainerCode": "game:stationarybasket",
+  "ContainerCode": "auto",
   "ContainerOrientation": "",
   "RandomMode": true,
   "RandomPickCount": 5,
@@ -65,10 +65,14 @@ the server/world - it will be recreated from the packaged file.
 ```
 
 - **ContainerCode** - which block to place as the starter container, *without* an orientation
-  suffix. Defaults to `"game:stationarybasket"` (the small reed chest, 8 slots) - other good
-  options are `"game:chest"` (16 slots) or `"game:trunk"` (36 slots). Any valid placeable
-  container block code works, including ones from other mods. Falls back to the default chest,
-  with a logged error, if the code is invalid or not a container.
+  suffix. Any valid placeable container block code works, including ones from other mods. Falls
+  back to the default chest, with a logged error, if the code is invalid or not a container.
+  Defaults to the special value `"auto"`: picks the smallest of the reed basket (8 slots),
+  `"game:chest"` (16), or `"game:trunk"` (36) that can fit however many `FixedItems` actually end
+  up guaranteed for that player - including anything addons like Class Loadouts or World
+  Conditions add on top of the top-level config - plus a little headroom for random picks, rather
+  than always using one fixed size. Set this to a specific code (e.g. `"game:stationarybasket"`)
+  to opt back out and always use exactly that container, same as before "auto" existed.
 - **ContainerOrientation** - which way the container faces: `"north"`, `"east"`, `"south"`, or
   `"west"`. Leave it as `""` (default) to pick a random direction for each player - it's purely
   cosmetic and has no effect on slot count or any other behavior. An invalid value falls back to
@@ -103,13 +107,16 @@ Each entry (`FixedItems` and `RandomPool`) supports:
 
 If a configured code belongs to a mod that isn't installed, that entry is skipped and a warning
 is logged - it won't crash the chest or break other entries. The container has a limited number
-of slots (8 for the default reed chest, 16 for a normal chest, 36 for a trunk, varies for modded
-containers). `FixedItems` are given first; `RandomPickCount` then automatically caps itself to
-whatever slots are left in *that specific container* (read from the real container once placed,
-so this works correctly for modded containers too, not just the vanilla chest/trunk) - so you
-won't get a log warning from this in normal use. The only case still worth a warning is
+of slots (8 for the reed basket, 16 for a normal chest, 36 for a trunk, varies for modded
+containers) - with `ContainerCode: "auto"` (the default), this is exactly what picks which of
+those three to use. `FixedItems` are given first; `RandomPickCount` then automatically caps itself
+to whatever slots are left in *that specific container* (read from the real container once
+placed, so this works correctly for modded containers too, not just the vanilla chest/trunk) - so
+you won't get a log warning from this in normal use. The only case still worth a warning is
 `FixedItems` alone exceeding the container's slots, since those are meant to be guaranteed and
-can't be auto-capped without breaking that guarantee.
+can't be auto-capped without breaking that guarantee - "auto" makes this rarer (it'll reach for a
+trunk before giving up) but doesn't make it impossible if enough addons are guaranteeing items at
+once, or if `ContainerCode` is set to something specific instead.
 
 ### Example configs
 
@@ -118,9 +125,12 @@ the mod, just there to copy from:
 
 | Tier | Container | Gear |
 |---|---|---|
-| [`low`](examples/StarterChestConfig.low.json) | Reed chest (8 slots) | Stone-age basics - same as the packaged default |
-| [`medium`](examples/StarterChestConfig.medium.json) | Chest (16 slots) | Copper-age tools |
-| [`high`](examples/StarterChestConfig.high.json) | Trunk (36 slots) | Tin-bronze-age tools |
+| [`low`](examples/StarterChestConfig.low.json) | Reed basket (8 slots, pinned) | Stone-age basics - same loot as the packaged default |
+| [`medium`](examples/StarterChestConfig.medium.json) | Chest (16 slots, pinned) | Copper-age tools |
+| [`high`](examples/StarterChestConfig.high.json) | Trunk (36 slots, pinned) | Tin-bronze-age tools |
+
+All three pin `ContainerCode` to a specific container rather than using `"auto"` - a good starting
+point if you want a fixed tier regardless of how many addons are contributing guaranteed items.
 
 To use one, copy its contents over `ModConfig/StarterChestConfig.json` and restart the server.
 
@@ -225,6 +235,33 @@ sapi.ModLoader.GetModSystem<StarterChestModSystem>()?.RegisterLoadoutProvider(My
 
 The official class-based-loadout addon, [Starter Chest: Class Loadouts](https://github.com/mmaust005/VS-StarterChestClasses),
 is built entirely on this API and is a good reference implementation.
+
+A second API lets an addon *adjust* a loadout instead of replacing it outright - for example,
+adding cold-weather gear on top of whatever a class-based provider already picked, without
+competing with it for the one provider slot:
+
+```csharp
+public void RegisterLoadoutModifier(string modifierId, StarterChestLoadoutModifier modifier)
+```
+
+- `modifier` is called with the loadout resolved so far (from the provider, or the top-level
+  config if there is none) and returns the adjusted loadout - append to `FixedItems`/`RandomPool`,
+  tweak `RandomPickCount`, whatever the addon needs. The loadout it receives is always a private
+  copy, safe to mutate directly.
+- Every registered modifier runs, in registration order, each receiving the previous one's
+  result - unlike providers, any number of modifiers can be registered and they all apply.
+  `modifierId` only needs to be unique enough to identify your addon in the log if something goes
+  wrong; a collision just logs a warning; both still run.
+- A `provider`, `readyCheck`, or `modifier` that throws is logged and safely contained rather than
+  breaking chest placement for that player: a provider failure falls back to the top-level config,
+  a modifier failure just skips that modifier, and a `readyCheck` failure is treated as not-ready
+  (and retried on the next poll).
+
+Call it the same way:
+
+```csharp
+sapi.ModLoader.GetModSystem<StarterChestModSystem>()?.RegisterLoadoutModifier("mymod:mymodifier", MyModifier);
+```
 
 ## Changelog
 
